@@ -8,6 +8,7 @@ from .sdkconfiguration import SDKConfiguration
 from .sources import Sources
 from .streams import Streams
 from .workspaces import Workspaces
+from airbyte.web_backend import WebBackend
 from airbyte import utils
 from airbyte.models import shared
 from typing import Callable, Dict, Union
@@ -64,4 +65,21 @@ class Airbyte:
         self.sources = Sources(self.sdk_configuration)
         self.streams = Streams(self.sdk_configuration)
         self.workspaces = Workspaces(self.sdk_configuration)
+        self.init_web_backend()
+
+
+    def init_web_backend(self):
+        if callable(self.sdk_configuration.security):
+            client = utils.configure_security_client(self.sdk_configuration.client, self.sdk_configuration.security())
+        else:
+            client = utils.configure_security_client(self.sdk_configuration.client, self.sdk_configuration.security)
+
+        self.web_backend = WebBackend(
+            client,
+            client,
+            self.sdk_configuration.server_url,
+            self.sdk_configuration.language,
+            self.sdk_configuration.sdk_version,
+            self.sdk_configuration.gen_version,
+        )
     
