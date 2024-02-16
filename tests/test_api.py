@@ -9,6 +9,9 @@ import airbyte
 from airbyte.models import shared
 from airbyte.web_backend_models import shared as wb_shared
 
+# Note: 'from __future__ import annotations' in the airbyte package should all be deleted in order to use '__type' when deserializing
+# Ref: https://github.com/lidatong/dataclasses-json/issues/458
+
 WORKSPACE_ID = "5f24949b-5fa7-486c-ba25-6c859de7c1d0"
 
 def test_readme_create_connection(s):
@@ -31,22 +34,47 @@ def test_readme_create_connection(s):
 
 
 def create_source(s, scp_config):
-    req = shared.SourceCreateRequest(
-        configuration=shared.SourceFile(
-            dataset_name='v20231031_ods_ae',
-            format=shared.FileFormat.CSV,
-            url='/home/yuhuang/download/henlius_hlx11/v20231031/ae.CSV',
-            provider=shared.SCPSecureCopyProtocol(
-                host=scp_config["HOST"],
-                user=scp_config["USER"],
-                password=scp_config["PASSWORD"]
-            ),
-        ),
-        name="henlius_hlx11_v20231031_ae_csv_py_api",
-        workspace_id=WORKSPACE_ID
-    )
+    # req = shared.SourceCreateRequest(
+    #     configuration=shared.SourceFile(
+    #         dataset_name='v20231031_ods_ae',
+    #         format=shared.FileFormat.CSV,
+    #         url='/home/yuhuang/download/henlius_hlx11/v20231031/ae.CSV',
+    #         provider=shared.SCPSecureCopyProtocol(
+    #             host=scp_config["HOST"],
+    #             user=scp_config["USER"],
+    #             password=scp_config["PASSWORD"]
+    #         ),
+    #     ),
+    #     name="henlius_hlx11_v20231031_ae_csv_py_api_manual_id",
+    #     workspace_id=WORKSPACE_ID,
+    # )
+    # print('req1', req.to_json())
+
+    req_dict = {
+        "configuration": {
+            "__type": "SourceFile",
+            "sourceType": "file",
+            "dataset_name": "v20231031_ods_ae",
+            "provider": {
+                "__type": "SCPSecureCopyProtocol",
+                "storage": "SCP",
+                "host": scp_config["HOST"],
+                "user": scp_config["USER"],
+                "password": scp_config["PASSWORD"],
+                "port": "22",
+            },
+            "url": "/home/yuhuang/download/henlius_hlx11/v20231031/ae.CSV",
+            "format": "csv",
+        },
+        "name": "henlius_hlx11_v20231031_ae_csv_py_api_schema_load",
+        "workspaceId": "5f24949b-5fa7-486c-ba25-6c859de7c1d0",
+    }
+    req = shared.SourceCreateRequest.schema().load(req_dict)
+    # req = shared.SourceCreateRequest.from_dict(req_dict) # Note: fail to load
+    print('req2 obj', req)
     res = s.sources.create_source(req)
     print('res', res)
+    print('source_id:', res.source_response.source_id)
 
 
 def create_destination(s, db_config):
@@ -65,6 +93,7 @@ def create_destination(s, db_config):
         name="henlius_hlx11_clickhouse",
         workspace_id=WORKSPACE_ID,
     )
+    print(req.to_json())
     res = s.destinations.create_destination(req)
     print('res', res)
 
@@ -102,7 +131,7 @@ def test_web_backend_create_connection(s):
             )
         )]
     )
-
+    print('req', req.to_json())
     res = s.web_backend.web_backend_create_connection(req)
 
     if res.raw_response is not None:
@@ -125,8 +154,8 @@ if __name__ == '__main__':
             ),
         ),
     )
-    # create_source(s, scp_config=json.load(open(os.path.join(TEST_PATH, 'scp.json'))))
-    create_destination(s, db_config=json.load(open(os.path.join(TEST_PATH, 'clickhouse.json'))))
+    create_source(s, scp_config=json.load(open(os.path.join(TEST_PATH, 'scp.json'))))
+    # create_destination(s, db_config=json.load(open(os.path.join(TEST_PATH, 'clickhouse.json'))))
     # test_readme_create_connection(s)
 
     # test_web_backend_create_connection(s) # web backend
