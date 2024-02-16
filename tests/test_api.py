@@ -6,7 +6,7 @@
 import os
 import json
 import airbyte
-from airbyte.models import shared
+from airbyte.models import shared, operations
 from airbyte.web_backend_models import shared as wb_shared
 
 # Note: 'from __future__ import annotations' in the airbyte package should all be deleted in order to use '__type' when deserializing
@@ -53,7 +53,8 @@ def create_source(s, scp_config):
     req_dict = {
         "configuration": {
             "__type": "SourceFile",
-            "sourceType": "file",
+            # "sourceType": "file",
+            "source_type": "file",
             "dataset_name": "v20231031_ods_ae",
             "provider": {
                 "__type": "SCPSecureCopyProtocol",
@@ -66,8 +67,8 @@ def create_source(s, scp_config):
             "url": "/home/yuhuang/download/henlius_hlx11/v20231031/ae.CSV",
             "format": "csv",
         },
-        "name": "henlius_hlx11_v20231031_ae_csv_py_api_schema_load",
-        "workspaceId": "5f24949b-5fa7-486c-ba25-6c859de7c1d0",
+        "name": "henlius_hlx11_v20231031_ae_csv_py_api_schema_load2",
+        "workspaceId": "22fa9f66-e4f8-488c-a1b9-97bd775ec016", # "5f24949b-5fa7-486c-ba25-6c859de7c1d0",
     }
     req = shared.SourceCreateRequest.schema().load(req_dict)
     # req = shared.SourceCreateRequest.from_dict(req_dict) # Note: fail to load
@@ -96,6 +97,7 @@ def create_destination(s, db_config):
     print(req.to_json())
     res = s.destinations.create_destination(req)
     print('res', res)
+    print('destination_id', res.destination_response.destination_id)
 
 
 def test_web_backend_create_connection(s):
@@ -139,12 +141,35 @@ def test_web_backend_create_connection(s):
         print('res.raw_response', type(res.raw_response), res.raw_response)
 
 
+def test_create_workspace(s):
+    workspace_name = 'test_workspace'
+    req = shared.WorkspaceCreateRequest(name=workspace_name)
+    res = s.workspaces.create_workspace(req)
+    print('res', res)
+    print('workspace_id', res.workspace_response.workspace_id)
+
+
+def test_list_workspace(s):
+    req = operations.ListWorkspacesRequest()
+    res = s.workspaces.list_workspaces(req)
+    print('res', res)
+    for workplace_res in res.workspaces_response.data:
+        print('workspace_id', workplace_res.workspace_id)
+
+
+def test_get_workspace_info(s):
+    # req = operations.GetWorkspaceRequest(workspace_id='22fa9f66-e4f8-488c-a1b9-97bd775ec016')
+    req = operations.GetWorkspaceRequest(workspace_id=WORKSPACE_ID)
+    res = s.workspaces.get_workspace(req)
+    print('res', res)
+    print('res.workspace_response.to_json()', type(res.workspace_response.to_json()), res.workspace_response.to_json())
+
+
 if __name__ == '__main__':
     TEST_PATH = os.path.dirname(os.path.realpath(__file__))
     config = json.load(open(os.path.join(TEST_PATH, 'wilddata.json')))
     server_url = 'http://111.229.107.107:8006/v1' # normal api
-    # server_url = 'http://111.229.107.107:8000/api' # web backend
-
+    airbyte_wb_server_url = 'http://111.229.107.107:8000/api' # web backend
     s = airbyte.Airbyte(
         server_url=server_url,
         security=shared.Security(
@@ -153,12 +178,15 @@ if __name__ == '__main__':
                 password=config["PASSWORD"],
             ),
         ),
+        airbyte_wb_server_url=airbyte_wb_server_url
     )
-    create_source(s, scp_config=json.load(open(os.path.join(TEST_PATH, 'scp.json'))))
+    # test_create_workspace(s)
+    test_list_workspace(s)
+    # test_get_workspace_info(s)
+    # create_source(s, scp_config=json.load(open(os.path.join(TEST_PATH, 'scp.json'))))
     # create_destination(s, db_config=json.load(open(os.path.join(TEST_PATH, 'clickhouse.json'))))
     # test_readme_create_connection(s)
-
-    # test_web_backend_create_connection(s) # web backend
+    test_web_backend_create_connection(s)
 
 
 

@@ -30,7 +30,8 @@ class Airbyte:
                  server_url: str = None,
                  url_params: Dict[str, str] = None,
                  client: requests_http.Session = None,
-                 retry_config: utils.RetryConfig = None
+                 retry_config: utils.RetryConfig = None,
+                 airbyte_wb_server_url: str = None,
                  ) -> None:
         """Instantiates the SDK configuring it with the provided parameters.
         
@@ -54,7 +55,9 @@ class Airbyte:
             if url_params is not None:
                 server_url = utils.template_url(server_url, url_params)
 
-        self.sdk_configuration = SDKConfiguration(client, security, server_url, server_idx, retry_config=retry_config)
+        self.sdk_configuration = SDKConfiguration(
+            client, security, server_url, server_idx, retry_config=retry_config,
+            airbyte_wb_server_url=airbyte_wb_server_url)
        
         self._init_sdks()
     
@@ -77,7 +80,7 @@ class Airbyte:
         self.web_backend = WebBackend(
             client,
             client,
-            self.sdk_configuration.server_url,
+            self.sdk_configuration.airbyte_wb_server_url,
             self.sdk_configuration.language,
             self.sdk_configuration.sdk_version,
             self.sdk_configuration.gen_version,

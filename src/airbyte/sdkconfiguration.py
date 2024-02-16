@@ -28,6 +28,8 @@ class SDKConfiguration:
     user_agent: str = 'speakeasy-sdk/python 0.47.0 2.253.0 1.0.0 airbyte-api'
     retry_config: RetryConfig = None
 
+    airbyte_wb_server_url: str = ''
+
     def get_server_details(self) -> Tuple[str, Dict[str, str]]:
         if self.server_url:
             return utils.remove_suffix(self.server_url, '/'), {}
