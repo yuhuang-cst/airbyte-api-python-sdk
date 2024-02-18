@@ -95,6 +95,10 @@ def create_destination(s, db_config):
         workspace_id=WORKSPACE_ID,
     )
     print(req.to_json())
+
+    req_dict = {
+        "configuration": {"database": "henlius_hlx11", "host": "111.229.107.107", "username": "wilddata", "destinationType": "clickhouse", "password": "Wilddata2@", "port": 7123, "tunnel_method": {"tunnel_method": "NO_TUNNEL"}, "ssl": false}, "name": "henlius_hlx11_clickhouse", "workspaceId": "5f24949b-5fa7-486c-ba25-6c859de7c1d0"}
+
     res = s.destinations.create_destination(req)
     print('res', res)
     print('destination_id', res.destination_response.destination_id)
@@ -134,6 +138,38 @@ def test_web_backend_create_connection(s):
         )]
     )
     print('req', req.to_json())
+
+    req_dict = {
+        "destinationId": "e41ebed7-48d5-460a-8dab-af680bad91c1",
+        "sourceId": "af801f7c-af49-4d99-84e6-323355c87009",
+        "status": "active",
+        "name": "test-py-api-web-backend2",
+        "namespaceDefinition": "destination",
+        "operations": [{
+            "name": "Normalization",
+            "operatorConfiguration": {
+                "operatorType": "normalization",
+                "normalization": {"option": "basic"}
+            },
+            "workspaceId": "5f24949b-5fa7-486c-ba25-6c859de7c1d0"
+        }],
+        "scheduleType": "manual",
+        "syncCatalog": {
+            "streams": [{
+                "config": {
+                    "destinationSyncMode": "overwrite",
+                    "syncMode": "full_refresh",
+                    "aliasName": "v20231031_ods_ae",
+                    "selected": True
+                },
+                "stream": {
+                    "name": "v20231031_ods_ae",
+                    "supportedSyncModes": ["full_refresh"]
+                }
+            }]
+        }
+    }
+
     res = s.web_backend.web_backend_create_connection(req)
 
     if res.raw_response is not None:
@@ -153,8 +189,10 @@ def test_list_workspace(s):
     req = operations.ListWorkspacesRequest()
     res = s.workspaces.list_workspaces(req)
     print('res', res)
-    for workplace_res in res.workspaces_response.data:
-        print('workspace_id', workplace_res.workspace_id)
+    workspace_ids = [workplace_res.workspace_id for workplace_res in res.workspaces_response.data]
+    for workspace_id in workspace_ids:
+        print('workspace_id', workspace_id)
+    return workspace_ids
 
 
 def test_get_workspace_info(s):
@@ -163,6 +201,60 @@ def test_get_workspace_info(s):
     res = s.workspaces.get_workspace(req)
     print('res', res)
     print('res.workspace_response.to_json()', type(res.workspace_response.to_json()), res.workspace_response.to_json())
+
+
+def test_del_workspace(s):
+    req = operations.DeleteWorkspaceRequest(workspace_id='22fa9f66-e4f8-488c-a1b9-97bd775ec016')
+    res = s.workspaces.delete_workspace(req)
+    print('res', res)
+
+
+def test_del_all_workspace(s):
+    workspace_ids = test_list_workspace(s)
+    for workspace_id in workspace_ids:
+        if workspace_id == '5f24949b-5fa7-486c-ba25-6c859de7c1d0': # Default Workspace
+            continue
+        req = operations.DeleteWorkspaceRequest(workspace_id=workspace_id)
+        res = s.workspaces.delete_workspace(req)
+        print('res', res)
+        print('res.raw_response', res.raw_response)
+
+
+def test_del_source(s):
+    req = operations.DeleteSourceRequest(source_id='ad465a18-8b00-4d72-8c7e-83fe1a721b8b')
+    res = s.sources.delete_source(req)
+    print('res', res)
+    print('res.raw_response', res.raw_response)
+
+
+def test_list_sources(s):
+    req_obj = operations.ListSourcesRequest(workspace_ids=['5f24949b-5fa7-486c-ba25-6c859de7c1d0'], limit=100000)
+    res = s.sources.list_sources(req_obj)
+    print('res', res)
+    for source_res in res.sources_response.data:
+        print('source_id', source_res.source_id)
+
+
+def test_list_connections(s):
+    req_obj = operations.ListConnectionsRequest(workspace_ids=['5f24949b-5fa7-486c-ba25-6c859de7c1d0'], limit=100000)
+    res = s.connections.list_connections(req_obj)
+    print('res', res)
+    for connection_res in res.connections_response.data:
+        print('connection_id', connection_res.connection_id)
+
+
+def test_get_source_info(s):
+    req_obj = operations.GetSourceRequest(source_id='5026e18b-001b-40ae-a7d8-06f08eda5772')
+    res = s.sources.get_source(req_obj)
+    print('res', res)
+
+
+def test_discover_schema(s):
+    http_res = s.web_backend.web_backend_discover_schema(source_id='74810bf9-1a1f-4217-8f6a-2501dfa46b44')
+    if http_res.status_code == 200:
+        print('schema_info', json.loads(http_res.text))
+    else:
+        raise RuntimeError(f'Failed to discover schema: status_code = {http_res.status_code}; text = {http_res.text}')
 
 
 if __name__ == '__main__':
@@ -181,12 +273,19 @@ if __name__ == '__main__':
         airbyte_wb_server_url=airbyte_wb_server_url
     )
     # test_create_workspace(s)
-    test_list_workspace(s)
+    # test_list_workspace(s)
+    # test_del_workspace(s)
+    # test_del_all_workspace(s)
     # test_get_workspace_info(s)
+    # test_list_sources(s)
+    # test_get_source_info(s)
+    test_discover_schema(s)
+    # test_list_connections(s)
+    # test_del_source(s)
     # create_source(s, scp_config=json.load(open(os.path.join(TEST_PATH, 'scp.json'))))
     # create_destination(s, db_config=json.load(open(os.path.join(TEST_PATH, 'clickhouse.json'))))
     # test_readme_create_connection(s)
-    test_web_backend_create_connection(s)
+    # test_web_backend_create_connection(s)
 
 
 

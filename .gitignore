@@ -9,3 +9,5 @@ __pycache__/
 tests/wilddata.json
 tests/scp.json
 tests/clickhouse.json
+rsync.sh
+rsync_exclude.txt
